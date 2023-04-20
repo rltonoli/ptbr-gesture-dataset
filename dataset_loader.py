@@ -1,7 +1,8 @@
 from torch.utils.data import Dataset
-from os import listdir, path
+from os import listdir, path, makedirs
 from pickle import load
 import numpy as np
+import bvhsdk
 
 class GestData(Dataset):
     def __init__(self, 
@@ -232,32 +233,33 @@ class Motion:
         self.data = np.load(self.path)
         self.take = take
 
-def bvh2npyconverter(overwrite = False):
-    npypath = os.path.join(MOTIONPATH, 'npy')
+def bvh2npyconverter(motionpath, overwrite = False):
+    npypath = path.join(motionpath, 'npy')
     # Creates a path to npy files inside the dataset file
     # if overwrite = False look for a available dir such as "npy_3"
     # if overwrite = True simply choose dir "npy"
-    if os.path.exists(npypath):
+    if path.exists(npypath):
         if not overwrite:
             i = 2
-            while os.path.exists(npypath+'_'+str(i)):
+            while path.exists(npypath+'_'+str(i)):
                 i += 1
             npypath = npypath+'_'+str(i)
-            os.makedirs(npypath)
+            makedirs(npypath)
     else:
-        os.makedirs(npypath)
+        makedirs(npypath)
 
-    bvhfiles = os.listdir(BVHPATH)
+    bvhpath = path.join(motionpath, "/bvh/")
+    bvhfiles = listdir(bvhpath)
     bvhfiles.sort()
     for bvhfile in bvhfiles:
-        anim = bvhsdk.ReadFile(os.path.join(BVHPATH, bvhfile))
+        anim = bvhsdk.ReadFile(path.join(bvhpath, bvhfile))
         npyfile = np.empty(shape=(anim.frames, 6*len(anim.getlistofjoints())))
         for i, joint in enumerate(anim.getlistofjoints()):
             npyfile[:, i*6:i*6+3] = joint.rotation
             for frame in range(anim.frames):
                 npyfile[frame, i*6+3:i*6+6] = joint.getPosition(frame)
 
-        np.save(os.path.join(npypath, bvhfile)[:-4], npyfile)
+        np.save(path.join(npypath, bvhfile)[:-4], npyfile)
         print('%s done.' % bvhfile)
 
 
